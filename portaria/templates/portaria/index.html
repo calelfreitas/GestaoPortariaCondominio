@@ -1,0 +1,184 @@
+{% extends 'portaria/base.html' %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h2>Painel da Portaria</h2>
+    <div>
+        <a href="{% url 'verificacao_entradas' %}" class="btn btn-success me-2">
+            <i class="bi bi-person-plus"></i> Nova entrada
+        </a>
+        <a href="{% url 'cadastro_entrega' %}" class="btn btn-primary">
+            <i class="bi bi-box-seam"></i> Registrar entrega
+        </a>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card text-bg-primary shadow-sm mb-3">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Moradores Cadastrados</h5>
+                    <p class="card-text fs-1 fw-bold mb-0">{{ total_moradores }}</p>
+                </div>
+                <i class="bi bi-people-fill fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card text-bg-warning shadow-sm mb-3">
+            <div class="card-body d-flex justify-content-between align-items-center">
+                <div>
+                    <h5 class="card-title">Entregas Pendentes</h5>
+                    <p class="card-text fs-1 fw-bold mb-0">{{ entregas_pendentes }}</p>
+                </div>
+                <i class="bi bi-box2-heart-fill fs-1 opacity-50"></i>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <!--Verifica as ultimas entradas/saidas de visitantes-->
+            <div class="card-header bg-white fw-bold">Visitantes</div>
+            <ul class="list-group list-group-flush">
+                {% for ent in entradas_recentes %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span><strong>{{ ent.nome_visitante }}</strong> → {{ ent.morador_destino.nome }}</span>
+                    <small class="text-muted">{{ ent.data_hora_entrada|date:"d/m H:i" }}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">Nenhuma entrada recente.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+
+    <div class="col-md-6">
+        <div class="card shadow-sm mb-3">
+            <!--Verifica as ocorrências mais recentes--> 
+            <div class="card-header bg-white fw-bold">Ocorrências</div>
+            <ul class="list-group list-group-flush">
+                {% for oc in ocorrencias_recentes %}
+                <li class="list-group-item d-flex justify-content-between">
+                    <span>{{ oc.titulo }}</span>
+                    <small class="text-muted">{{ oc.data_registro|date:"d/m H:i" }}</small>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-muted">Nenhuma ocorrência registrada.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+
+<!-- Quadro de Avisos da Portaria -->
+<div class="card shadow-sm border-0">
+    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-megaphone-fill me-2 text-warning"></i>Quadro de Avisos</span>
+        <span id="contador-avisos" class="badge bg-secondary">0 avisos</span>
+    </div>
+    <div class="card-body bg-white">
+        <form id="form-aviso" class="row g-2 mb-3">
+            <div class="col-md-7">
+                <input type="text" id="texto-aviso" class="form-control" placeholder="Digite um aviso para o próximo turno ou moradores (ex: Manutenção no elevador às 14h)..." required>
+            </div>
+            <div class="col-md-3">
+                <select id="tipo-aviso" class="form-select">
+                    <option value="info">Informativo</option>
+                    <option value="warning">Atenção</option>
+                    <option value="danger">Urgente</option>
+                </select>
+            </div>
+            <div class="col-md-2 d-grid">
+                <button type="submit" class="btn btn-dark">
+                    <i class="bi bi-plus-circle me-1"></i> Publicar
+                </button>
+            </div>
+        </form>
+
+        <div id="lista-avisos" class="list-group"></div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        const formAviso = document.getElementById("form-aviso");
+        const inputTexto = document.getElementById("texto-aviso");
+        const selectTipo = document.getElementById("tipo-aviso");
+        const listaAvisos = document.getElementById("lista-avisos");
+        const contadorAvisos = document.getElementById("contador-avisos");
+
+        // Avisos iniciais de exemplo caso não exista nenhum salvo ainda
+        const avisosPadrao = [
+            { id: 1, texto: "Manutenção preventiva nos elevadores do Bloco A prevista para amanhã às 09:00.", tipo: "warning", data: "Aviso Fixo" },
+            { id: 2, texto: "Lembrete: Conferir documento com foto de todos os prestadores de serviço antes de liberar acesso.", tipo: "info", data: "Norma Interna" }
+        ];
+
+        let avisos = JSON.parse(localStorage.getItem("portaria_avisos")) || avisosPadrao;
+
+        const estilos = {
+            info: { badge: "bg-primary", label: "Informativo", borda: "border-primary" },
+            warning: { badge: "bg-warning text-dark", label: "Atenção", borda: "border-warning" },
+            danger: { badge: "bg-danger", label: "Urgente", borda: "border-danger" }
+        };
+
+        function renderizarAvisos() {
+            listaAvisos.innerHTML = "";
+            contadorAvisos.textContent = `${avisos.length} ${avisos.length === 1 ? "aviso" : "avisos"}`;
+
+            if (avisos.length === 0) {
+                listaAvisos.innerHTML = `<div class="text-muted text-center py-3">Nenhum aviso publicado no momento.</div>`;
+                return;
+            }
+
+            avisos.forEach(aviso => {
+                const cfg = estilos[aviso.tipo] || estilos.info;
+                const item = document.createElement("div");
+                item.className = `list-group-item d-flex justify-content-between align-items-center border-start border-4 ${cfg.borda} mb-2 rounded shadow-sm`;
+                item.innerHTML = `
+                    <div>
+                        <span class="badge ${cfg.badge} me-2">${cfg.label}</span>
+                        <span>${aviso.texto}</span>
+                        <small class="text-muted d-block mt-1"><i class="bi bi-clock me-1"></i>${aviso.data}</small>
+                    </div>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-3" title="Remover aviso" onclick="removerAviso(${aviso.id})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                `;
+                listaAvisos.appendChild(item);
+            });
+        }
+
+        window.removerAviso = function (id) {
+            avisos = avisos.filter(a => a.id !== id);
+            localStorage.setItem("portaria_avisos", JSON.stringify(avisos));
+            renderizarAvisos();
+        };
+
+        formAviso.addEventListener("submit", function (e) {
+            e.preventDefault();
+            const texto = inputTexto.value.trim();
+            if (!texto) return;
+
+            const agora = new Date();
+            const dataFormatada = agora.toLocaleDateString("pt-BR") + " às " + agora.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+
+            avisos.unshift({
+                id: Date.now(),
+                texto: texto,
+                tipo: selectTipo.value,
+                data: dataFormatada
+            });
+
+            localStorage.setItem("portaria_avisos", JSON.stringify(avisos));
+            inputTexto.value = "";
+            renderizarAvisos();
+        });
+
+        renderizarAvisos();
+    });
+</script>
+{% endblock %}

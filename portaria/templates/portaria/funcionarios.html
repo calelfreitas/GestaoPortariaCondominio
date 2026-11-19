@@ -1,0 +1,40 @@
+{% extends 'portaria/base.html' %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-person-vcard-fill me-2 text-warning"></i>Cadastro de colaboradores</span>
+    </div>
+</div>
+<form method="post" class="card p-3 mb-4">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Salvar</button>
+</form>
+
+<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-1">
+        <span class="fw-bold ms-2">Equipe cadastrada</span>
+    </div>
+<table class="table table-striped bg-white">
+    <thead>
+        <tr>
+            <th>Nome</th>
+            <th>Cargo</th>
+            <th>Turno</th>
+            <th>Telefone</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for f in funcionarios %}
+        <tr>
+            <td>{{ f.nome }}</td>
+            <td>{{ f.cargo }}</td>
+            <td>{{ f.turno }}</td>
+            <td>{{ f.telefone }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Nenhum funcionário cadastrado.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}

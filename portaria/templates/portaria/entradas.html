@@ -1,0 +1,39 @@
+{% extends 'portaria/base.html' %}
+
+{% block content %}
+<div class="card shadow-sm border-0">
+<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+        <span class="fw-bold"><i class="bi bi-person-badge-fill me-2 text-warning"></i>Verificação de entradas</span>
+    </div>
+<form method="post" class="card p-3 mb-4">
+    {% csrf_token %}
+    {{ form.as_p }}
+    <button type="submit" class="btn btn-primary">Registrar </button>
+</form>
+
+<div class="card-header bg-dark text-white d-flex justify-content-between align-items-center py-1">
+        <span class="fw-bold">Registro de visitantes</span>
+</div>
+<table class="table table-striped bg-white">
+    <thead>
+        <tr>
+            <th>Visitante</th>
+            <th>Documento</th>
+            <th>Destino</th>
+            <th>Data/Hora Entrada</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for ent in entradas %}
+        <tr>
+            <td>{{ ent.nome_visitante }}</td>
+            <td>{{ ent.documento }}</td>
+            <td>{{ ent.morador_destino }}</td>
+            <td>{{ ent.data_hora_entrada|date:"d/m/Y H:i" }}</td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="4">Nenhuma entrada registrada.</td></tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% endblock %}
